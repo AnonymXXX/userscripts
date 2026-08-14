@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.2.1
+// @version      1.2.2
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -178,6 +178,16 @@
         return accounts;
     }
 
+    function normalizeHost(input) {
+        var s = String(input || '').trim().toLowerCase().replace(/\/+$/, '');
+        if (!s) { return ''; }
+        try {
+            return new URL(s.includes('://') ? s : 'http://' + s).hostname.toLowerCase();
+        } catch (e) {
+            return s;
+        }
+    }
+
     function hostMatches(accountUrl, pageHref) {
         if (!accountUrl) { return false; }
         var host;
@@ -214,7 +224,9 @@
         try { host = location.hostname.toLowerCase(); } catch (e) { return null; }
         var rules = Object.assign({}, getUserRules(), SITE_RULES);
         for (var k in rules) {
-            if (host === k || host.endsWith('.' + k)) { return rules[k]; }
+            var target = normalizeHost(k);
+            if (!target) { continue; }
+            if (host === target || host.endsWith('.' + target)) { return rules[k]; }
         }
         return null;
     }
