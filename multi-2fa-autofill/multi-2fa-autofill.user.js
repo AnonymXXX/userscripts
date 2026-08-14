@@ -1,10 +1,8 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.2.0
+// @version      1.2.1
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
-// @match        http://10.0.40.10/*
-// @match        https://10.0.40.10/*
 // @match        http://*/*
 // @match        https://*/*
 // @grant        GM_setValue
@@ -201,9 +199,9 @@
         submitSelector: '#submit_button'
     };
 
+    // 内置站点规则请按需在此添加；个人站点建议通过油猴菜单「添加站点规则」配置（存本地，不进代码）
     var SITE_RULES = {
-        '10.0.40.10': JUMP_SERVER_RULE,
-        'jumpserver.yndysc.com': JUMP_SERVER_RULE
+        // 'example.com': JUMP_SERVER_RULE
     };
 
     function getUserRules() {
@@ -473,7 +471,7 @@
             showToast('自动提交已' + (autoSubmit ? '开启' : '关闭'));
         });
         GM_registerMenuCommand('添加站点规则（自定义字段选择器）', function () {
-            var host = prompt('站点域名（如 my.vpn.internal 或 10.0.1.5）');
+            var host = prompt('站点域名（如 vpn.example.com）');
             if (!host) { return; }
             host = host.trim().toLowerCase();
             var field = prompt('验证码输入框 CSS 选择器（如 #mfa-otp input 或 input[name="code"]）');
