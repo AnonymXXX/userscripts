@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.5.2
+// @version      1.5.3
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -385,7 +385,7 @@
         var btn = document.createElement('button');
         btn.id = 'm2fa-float';
         btn.textContent = '2FA';
-        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);display:none;';
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (floatHidden) {
