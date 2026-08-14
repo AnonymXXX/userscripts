@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.4.1
+// @version      1.5.0
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -411,6 +411,11 @@
                 btn.textContent = '2';
                 return;
             }
+            if (!findOtpField()) {
+                btn.style.display = 'none';
+                return;
+            }
+            btn.style.display = 'block';
             btn.style.width = 'auto';
             btn.style.minWidth = '112px';
             btn.style.height = '44px';
