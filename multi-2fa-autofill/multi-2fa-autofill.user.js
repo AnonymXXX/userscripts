@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.1.0
+// @version      1.2.0
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://10.0.40.10/*
 // @match        https://10.0.40.10/*
@@ -182,23 +182,28 @@
 
     function hostMatches(accountUrl, pageHref) {
         if (!accountUrl) { return false; }
-        var target;
-        var a = String(accountUrl).trim().replace(/\/+$/, '');
-        try {
-            target = new URL(a.includes('://') ? a : 'http://' + a).hostname.toLowerCase();
-        } catch (e) { return false; }
         var host;
         try { host = new URL(pageHref).hostname.toLowerCase(); } catch (e) { return false; }
-        return host === target || host.endsWith('.' + target);
+        return String(accountUrl).split(/[,，]/).some(function (u) {
+            u = (u || '').trim().replace(/\/+$/, '');
+            if (!u) { return false; }
+            var target;
+            try { target = new URL(u.includes('://') ? u : 'http://' + u).hostname.toLowerCase(); }
+            catch (e) { return false; }
+            return host === target || host.endsWith('.' + target);
+        });
     }
 
     /* ===== PURE CORE END ===== */
 
+    var JUMP_SERVER_RULE = {
+        fieldSelector: '#mfa-otp input.input-style, input.input-style[name="code"]',
+        submitSelector: '#submit_button'
+    };
+
     var SITE_RULES = {
-        '10.0.40.10': {
-            fieldSelector: '#mfa-otp input.input-style, input.input-style[name="code"]',
-            submitSelector: '#submit_button'
-        }
+        '10.0.40.10': JUMP_SERVER_RULE,
+        'jumpserver.yndysc.com': JUMP_SERVER_RULE
     };
 
     function getUserRules() {
