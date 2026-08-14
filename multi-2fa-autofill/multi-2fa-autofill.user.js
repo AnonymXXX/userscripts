@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.2.2
+// @version      1.2.3
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -280,14 +280,16 @@
         for (var j = 0; j < inputs.length; j++) {
             var inp = inputs[j];
             var maxLen = parseInt(inp.maxLength || '0', 10);
-            if (!isVisible(inp) || inp.disabled || inp.readOnly) { continue; }
-            if (maxLen > 0 && maxLen <= 8 && /^[0-9]{6,8}$/.test(inp.value || '') === false) {
-                var ph = inp.placeholder || '';
-                var autocomplete = inp.getAttribute('autocomplete') || '';
-                if (PLACEHOLDER_RE.test(ph) || /one-time-code/i.test(autocomplete) || (maxLen >= 6 && maxLen <= 8 && /^[0-9\s-]*$/.test(inp.getAttribute('pattern') || ''))) {
-                    return inp;
-                }
-            }
+            if (!isVisible(inp) || inp.disabled || inp.readOnly || inp.type === 'password') { continue; }
+            var ph = inp.placeholder || '';
+            var autocomplete = inp.getAttribute('autocomplete') || '';
+            var pattern = inp.getAttribute('pattern') || '';
+            var isOtpField = false;
+            if (/one-time-code/i.test(autocomplete)) { isOtpField = true; }
+            else if (PLACEHOLDER_RE.test(ph) && (maxLen === 0 || maxLen <= 8)) { isOtpField = true; }
+            else if (maxLen > 0 && maxLen <= 8 && /^[0-9\s-]*$/.test(pattern)) { isOtpField = true; }
+            else if (inp.getAttribute('inputmode') === 'numeric' && (maxLen === 0 || (maxLen >= 4 && maxLen <= 8))) { isOtpField = true; }
+            if (isOtpField) { return inp; }
         }
         return null;
     }
