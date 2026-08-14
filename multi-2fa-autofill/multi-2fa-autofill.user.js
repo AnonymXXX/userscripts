@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.3.0
+// @version      1.3.1
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -441,9 +441,8 @@
         if (!name) { return; }
         var seed = prompt('TOTP Secret（base32）').trim();
         if (!seed || !isValidBase32(seed)) { showToast('Secret 格式无效', '#dc2626'); return; }
-        var url = prompt('站点 URL 或域名（留空自动使用当前域名）', location.hostname || '');
         var list = getAccounts();
-        list.push({ id: Date.now(), name: name, issuer: '', seed: seed.toUpperCase(), digits: 6, period: 30, url: (url || '').trim() });
+        list.push({ id: Date.now(), name: name, issuer: '', seed: seed.toUpperCase(), digits: 6, period: 30, url: location.hostname || '' });
         saveAccounts(list);
         renderPanel();
         showToast('已添加「' + name + '」', '#059669');
