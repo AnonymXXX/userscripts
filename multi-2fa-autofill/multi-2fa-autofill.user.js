@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.3.1
+// @version      1.3.2
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -436,8 +436,18 @@
         }
     }
 
+    function guessAccountName() {
+        var t = (document.title || '').trim();
+        if (!t) { return ''; }
+        var parts = t.split(/[-|_·\s]+/).filter(Boolean);
+        var name = parts.length > 1 ? parts[parts.length - 1] : t;
+        if (name.length < 2) { name = t; }
+        return name.slice(0, 20);
+    }
+
     function addAccountFlow() {
-        var name = prompt('账号名称（如 JumpServer）');
+        var guessed = guessAccountName();
+        var name = guessed || prompt('账号名称（如 JumpServer）');
         if (!name) { return; }
         var seed = prompt('TOTP Secret（base32）').trim();
         if (!seed || !isValidBase32(seed)) { showToast('Secret 格式无效', '#dc2626'); return; }
@@ -458,6 +468,7 @@
         parsed.forEach(function (p) {
             var exists = list.some(function (a) { return a.seed === p.seed; });
             if (exists) { dup++; return; }
+            if (p.name === '未命名') { p.name = guessAccountName() || '未命名'; }
             p.id = Date.now() + Math.random();
             p.url = location.hostname || '';
             list.push(p);
