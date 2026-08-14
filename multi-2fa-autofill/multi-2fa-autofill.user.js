@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.5.0
+// @version      1.5.1
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -352,10 +352,9 @@
         var list = getAccounts();
         var html = '<div style="padding:10px 12px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;">';
         html += '<strong>2FA 账号 (' + list.length + ')</strong>';
-        html += '<div><button data-act="add" style="margin-right:4px;border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;">添加</button>';
-        html += '<button data-act="import" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;">导入</button></div></div>';
+        html += '<div><button data-act="add" style="margin-right:4px;border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 10px;cursor:pointer;">添加</button></div></div>';
         if (list.length === 0) {
-            html += '<div style="padding:16px;color:#6b7280;text-align:center;">暂无账号<br><span style="font-size:12px;">点右上角「导入」粘贴 otpauth:// URI</span></div>';
+            html += '<div style="padding:16px;color:#6b7280;text-align:center;">暂无账号<br><span style="font-size:12px;">点右上角「添加」录入密钥</span></div>';
         } else {
             list.forEach(function (a, idx) {
                 var code = currentCode(a);
@@ -365,7 +364,7 @@
                 html += '<div style="flex:1;min-width:0;"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">' + esc(a.name) + (a.issuer ? ' <span style="color:#9ca3af;font-weight:400;">' + esc(a.issuer) + '</span>' : '') + '</div>';
                 html += '<div style="color:#6b7280;font-size:11px;font-family:Menlo,monospace;">' + code + '（' + remain + 's）' + (a.url ? (matched ? ' · 当前站点 ✓' : ' · ' + esc(a.url)) : '') + '</div></div>';
                 html += '<button data-act="fill" data-idx="' + idx + '" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;margin-right:4px;cursor:pointer;" title="填入当前页面">填</button>';
-                html += '<button data-act="del" data-idx="' + idx + '" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px;" title="删除">×</button></div>';
+                html += '<button data-act="del" data-idx="' + idx + '" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;font-weight:600;" title="删除">删除</button></div>';
             });
         }
         html += '<div style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">';
@@ -437,8 +436,6 @@
         var list = getAccounts();
         if (act === 'add') {
             addAccountFlow();
-        } else if (act === 'import') {
-            importFlow();
         } else if (act === 'fill' && idx !== null) {
             var field = findOtpField();
             var acc = list[parseInt(idx, 10)];
@@ -487,28 +484,7 @@
         showToast('已添加「' + name + '」', '#059669');
     }
 
-    function importFlow() {
-        var text = prompt('粘贴导入内容（每行一个）：\n1) otpauth://totp/...  URI\n2) 纯 base32 secret\n3) 名称: secret\n\n示例：\notpauth://totp/JumpServer:user?secret=JBSWY3DPEHPK3PXP&issuer=JumpServer\nGITHUB  :  GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ');
-        if (!text) { return; }
-        var parsed = parseImportText(text);
-        if (parsed.length === 0) { showToast('未解析出有效账号', '#dc2626'); return; }
-        var list = getAccounts();
-        var dup = 0;
-        parsed.forEach(function (p) {
-            var exists = list.some(function (a) { return a.seed === p.seed; });
-            if (exists) { dup++; return; }
-            if (p.name === '未命名') { p.name = guessAccountName() || '未命名'; }
-            p.id = Date.now() + Math.random();
-            p.url = location.hostname || '';
-            list.push(p);
-        });
-        saveAccounts(list);
-        renderPanel();
-        showToast('导入 ' + parsed.length + ' 个，跳过重复 ' + dup + ' 个', '#059669');
-    }
-
     function setupMenus() {
-        GM_registerMenuCommand('导入 otpauth / secret', importFlow);
         GM_registerMenuCommand('导出备份（复制到剪贴板）', function () {
             var lines = getAccounts().map(function (a) {
                 return 'otpauth://totp/' + encodeURIComponent((a.issuer ? a.issuer + ':' : '') + a.name) + '?secret=' + a.seed + '&issuer=' + encodeURIComponent(a.issuer || a.name) + '&digits=' + (a.digits || 6) + '&period=' + (a.period || 30);
