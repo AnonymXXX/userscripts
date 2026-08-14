@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.4.0
+// @version      1.4.1
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -370,7 +370,7 @@
         }
         html += '<div style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">';
         html += '<span>自动填充: <b>' + (autoFill ? '开' : '关') + '</b></span><span>自动提交: <b>' + (autoSubmit ? '开' : '关') + '</b></span>';
-        html += '<button data-act="float" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;">悬浮按钮: ' + (floatHidden ? '隐藏' : '显示') + '</button></div>';
+        html += '<button data-act="float" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;">悬浮按钮: ' + (floatHidden ? '圆点' : '完整') + '</button></div>';
         panel.innerHTML = html;
     }
 
@@ -384,9 +384,15 @@
         var btn = document.createElement('button');
         btn.id = 'm2fa-float';
         btn.textContent = '2FA';
-        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);display:' + (floatHidden ? 'none' : 'block') + ';';
+        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);';
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
+            if (floatHidden) {
+                floatHidden = false;
+                var s = getSettings(); s.floatHidden = floatHidden; saveSettings(s);
+                renderPanel();
+                return;
+            }
             panelOpen = !panelOpen;
             if (!panel) { buildPanel(); }
             panel.style.display = panelOpen ? 'block' : 'none';
@@ -395,8 +401,22 @@
         document.body.appendChild(btn);
 
         setInterval(function () {
-            if (floatHidden) { btn.style.display = 'none'; return; }
-            btn.style.display = 'block';
+            if (floatHidden) {
+                btn.style.width = '28px';
+                btn.style.minWidth = '28px';
+                btn.style.height = '28px';
+                btn.style.padding = '0';
+                btn.style.borderRadius = '50%';
+                btn.style.fontSize = '12px';
+                btn.textContent = '2';
+                return;
+            }
+            btn.style.width = 'auto';
+            btn.style.minWidth = '112px';
+            btn.style.height = '44px';
+            btn.style.padding = '0 14px';
+            btn.style.borderRadius = '22px';
+            btn.style.fontSize = '15px';
             var list = getAccounts();
             if (list.length === 0) { btn.textContent = '2FA'; return; }
             var matched = matchAccountsForPage();
@@ -430,9 +450,7 @@
             floatHidden = !floatHidden;
             var s = getSettings(); s.floatHidden = floatHidden; saveSettings(s);
             renderPanel();
-            var btn = document.getElementById('m2fa-float');
-            if (btn) { btn.style.display = floatHidden ? 'none' : 'block'; }
-            showToast('悬浮按钮已' + (floatHidden ? '隐藏' : '显示'), '#059669');
+            showToast('悬浮按钮已' + (floatHidden ? '缩为圆点' : '恢复完整'), '#059669');
         } else if (act === null && el.closest('[data-idx]')) {
             var row = el.closest('[data-idx]');
             var i = parseInt(row.getAttribute('data-idx'), 10);
@@ -498,12 +516,10 @@
             var s = getSettings(); s.autofill = autoFill; saveSettings(s);
             showToast('自动填充已' + (autoFill ? '开启' : '关闭'));
         });
-        GM_registerMenuCommand('悬浮按钮: ' + (floatHidden ? '隐藏' : '显示'), function () {
+        GM_registerMenuCommand('悬浮按钮: ' + (floatHidden ? '圆点' : '完整'), function () {
             floatHidden = !floatHidden;
             var s = getSettings(); s.floatHidden = floatHidden; saveSettings(s);
-            var btn = document.getElementById('m2fa-float');
-            if (btn) { btn.style.display = floatHidden ? 'none' : 'block'; }
-            showToast('悬浮按钮已' + (floatHidden ? '隐藏' : '显示'));
+            showToast('悬浮按钮已' + (floatHidden ? '缩为圆点' : '恢复完整'));
         });
         GM_registerMenuCommand('自动提交: ' + (autoSubmit ? '开' : '关'), function () {
             autoSubmit = !autoSubmit;
