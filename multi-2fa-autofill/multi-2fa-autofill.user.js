@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.3.2
+// @version      1.4.0
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -235,12 +235,13 @@
         'input[autocomplete="one-time-code"]',
         'input[name="code"]',
         'input[name="otp"]',
+        'input[name="otp_code"]',
         'input[name="otp_token"]',
         'input[name="totp"]',
         'input[name="2fa"]'
     ];
 
-    var PLACEHOLDER_RE = /(验证码|验证|动态口令|动态密码|otp|2fa|mfa|verification|one[ -]?time|authenticator)/i;
+    var PLACEHOLDER_RE = /(验证码|验证|动态口令|动态密码|六位|otp|2fa|mfa|verification|one[ -]?time|authenticator|figures|digits)/i;
 
     function getAccounts() {
         try { return JSON.parse(GM_getValue(STORE_KEY, '[]')) || []; }
@@ -328,6 +329,7 @@
     var panelOpen = false;
     var autoFill = getSettings().autofill !== false;
     var autoSubmit = getSettings().autosubmit === true;
+    var floatHidden = getSettings().floatHidden === true;
 
     function showToast(msg, color) {
         var t = document.createElement('div');
@@ -366,8 +368,9 @@
                 html += '<button data-act="del" data-idx="' + idx + '" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px;" title="删除">×</button></div>';
             });
         }
-        html += '<div style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;display:flex;justify-content:space-between;">';
-        html += '<span>自动填充: <b>' + (autoFill ? '开' : '关') + '</b></span><span>自动提交: <b>' + (autoSubmit ? '开' : '关') + '</b></span></div>';
+        html += '<div style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">';
+        html += '<span>自动填充: <b>' + (autoFill ? '开' : '关') + '</b></span><span>自动提交: <b>' + (autoSubmit ? '开' : '关') + '</b></span>';
+        html += '<button data-act="float" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;">悬浮按钮: ' + (floatHidden ? '隐藏' : '显示') + '</button></div>';
         panel.innerHTML = html;
     }
 
@@ -381,7 +384,7 @@
         var btn = document.createElement('button');
         btn.id = 'm2fa-float';
         btn.textContent = '2FA';
-        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);display:none;';
+        btn.style.cssText = 'position:fixed;right:24px;bottom:48px;z-index:2147483646;min-width:112px;height:44px;padding:0 14px;border:none;border-radius:22px;background:#2563eb;color:#fff;font-size:15px;font-family:Menlo,monospace;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);display:' + (floatHidden ? 'none' : 'block') + ';';
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             panelOpen = !panelOpen;
@@ -392,11 +395,7 @@
         document.body.appendChild(btn);
 
         setInterval(function () {
-            if (!findOtpField()) {
-                btn.style.display = 'none';
-                if (panel) { panel.style.display = 'none'; panelOpen = false; }
-                return;
-            }
+            if (floatHidden) { btn.style.display = 'none'; return; }
             btn.style.display = 'block';
             var list = getAccounts();
             if (list.length === 0) { btn.textContent = '2FA'; return; }
@@ -427,6 +426,13 @@
                 saveAccounts(list);
                 renderPanel();
             }
+        } else if (act === 'float') {
+            floatHidden = !floatHidden;
+            var s = getSettings(); s.floatHidden = floatHidden; saveSettings(s);
+            renderPanel();
+            var btn = document.getElementById('m2fa-float');
+            if (btn) { btn.style.display = floatHidden ? 'none' : 'block'; }
+            showToast('悬浮按钮已' + (floatHidden ? '隐藏' : '显示'), '#059669');
         } else if (act === null && el.closest('[data-idx]')) {
             var row = el.closest('[data-idx]');
             var i = parseInt(row.getAttribute('data-idx'), 10);
@@ -491,6 +497,13 @@
             autoFill = !autoFill;
             var s = getSettings(); s.autofill = autoFill; saveSettings(s);
             showToast('自动填充已' + (autoFill ? '开启' : '关闭'));
+        });
+        GM_registerMenuCommand('悬浮按钮: ' + (floatHidden ? '隐藏' : '显示'), function () {
+            floatHidden = !floatHidden;
+            var s = getSettings(); s.floatHidden = floatHidden; saveSettings(s);
+            var btn = document.getElementById('m2fa-float');
+            if (btn) { btn.style.display = floatHidden ? 'none' : 'block'; }
+            showToast('悬浮按钮已' + (floatHidden ? '隐藏' : '显示'));
         });
         GM_registerMenuCommand('自动提交: ' + (autoSubmit ? '开' : '关'), function () {
             autoSubmit = !autoSubmit;
