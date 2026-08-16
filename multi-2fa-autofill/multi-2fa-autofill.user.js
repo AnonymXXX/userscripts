@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.5.3
+// @version      1.6.1
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -14,9 +14,18 @@
 (function () {
     'use strict';
 
+    /* ===== 域名白名单：仅在这些域名下自动填入验证码 =====
+       用户可在油猴菜单「设置自动填充白名单域名」中自行配置（存本地），
+       也可直接改下方常量作为内置默认（用户设置优先）。
+       子域名自动匹配：example.com 同时覆盖 a.example.com。
+       留空 = 不在任何站点自动填入。
+       手动复制 / 面板「填」按钮不受此限制。 */
+    var ALLOWED_DOMAINS = [];
+
     var STORE_KEY = 'm2fa_accounts';
     var SETTING_KEY = 'm2fa_settings';
     var RULES_KEY = 'm2fa_rules';
+    var ALLOWED_KEY = 'm2fa_allowed_domains';
 
     /* ===== PURE CORE BEGIN ===== */
 
@@ -203,6 +212,26 @@
     }
 
     /* ===== PURE CORE END ===== */
+
+    function getAllowedDomains() {
+        try {
+            var stored = JSON.parse(GM_getValue(ALLOWED_KEY, 'null'));
+            if (Array.isArray(stored)) { return stored; }
+        } catch (e) {}
+        return ALLOWED_DOMAINS;
+    }
+
+    function isAllowedDomain() {
+        var host;
+        try { host = location.hostname.toLowerCase(); } catch (e) { return false; }
+        var domains = getAllowedDomains();
+        if (domains.length === 0) { return false; }
+        return domains.some(function (d) {
+            var target = normalizeHost(d);
+            if (!target) { return false; }
+            return host === target || host.endsWith('.' + target);
+        });
+    }
 
     var JUMP_SERVER_RULE = {
         fieldSelector: '#mfa-otp input.input-style, input.input-style[name="code"]',
@@ -514,6 +543,14 @@
             var s = getSettings(); s.autosubmit = autoSubmit; saveSettings(s);
             showToast('自动提交已' + (autoSubmit ? '开启' : '关闭'));
         });
+        GM_registerMenuCommand('设置自动填充白名单域名', function () {
+            var current = getAllowedDomains().join(', ');
+            var input = prompt('自动填充白名单域名（逗号分隔，留空=清空，即不再自动填入）：\n子域名自动匹配，例：example.com 同时覆盖 a.example.com', current);
+            if (input === null) { return; }
+            var list = input.split(/[,，\s]+/).map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
+            GM_setValue(ALLOWED_KEY, JSON.stringify(list));
+            showToast(list.length ? '白名单已保存：' + list.join(', ') : '已清空白名单（不再自动填入）', '#059669');
+        });
         GM_registerMenuCommand('添加站点规则（自定义字段选择器）', function () {
             var host = prompt('站点域名（如 vpn.example.com）');
             if (!host) { return; }
@@ -548,6 +585,7 @@
 
     function tryAutofill() {
         if (!autoFill) { return; }
+        if (!isAllowedDomain()) { return; }
         var matches = matchAccountsForPage();
         if (matches.length !== 1) { return; }
         var field = findOtpField();
