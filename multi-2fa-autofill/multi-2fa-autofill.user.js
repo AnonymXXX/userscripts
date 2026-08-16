@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         多平台 2FA 自动填充（Multi 2FA Autofill）
 // @namespace    local.multi-2fa-autofill
-// @version      1.6.1
+// @version      1.7.0
 // @description  多账号 TOTP 管理器：otpauth URI 批量导入、站点匹配自动填充、悬浮面板一键复制。悬浮按钮仅在页面存在验证码输入框时显示（登录后自动隐藏）。
 // @match        http://*/*
 // @match        https://*/*
@@ -356,8 +356,6 @@
 
     var panel = null;
     var panelOpen = false;
-    var hitCount = 0;
-    var missCount = 0;
     var autoFill = getSettings().autofill !== false;
     var autoSubmit = getSettings().autosubmit === true;
     var floatHidden = getSettings().floatHidden === true;
@@ -431,7 +429,12 @@
         document.body.appendChild(btn);
 
         setInterval(function () {
+            if (!isAllowedDomain()) {
+                btn.style.display = 'none';
+                return;
+            }
             if (floatHidden) {
+                btn.style.display = 'block';
                 btn.style.width = '28px';
                 btn.style.minWidth = '28px';
                 btn.style.height = '28px';
@@ -441,27 +444,18 @@
                 btn.textContent = '2';
                 return;
             }
-            var has = !!findOtpField();
-            if (has) { hitCount++; missCount = 0; }
-            else { missCount++; hitCount = 0; }
-            var show = hitCount >= 3;
-            var hide = missCount >= 4;
-            if (show) {
-                btn.style.display = 'block';
-                btn.style.width = 'auto';
-                btn.style.minWidth = '112px';
-                btn.style.height = '44px';
-                btn.style.padding = '0 14px';
-                btn.style.borderRadius = '22px';
-                btn.style.fontSize = '15px';
-                var list = getAccounts();
-                if (list.length === 0) { btn.textContent = '2FA'; return; }
-                var matched = matchAccountsForPage();
-                var acc = matched[0] || list[0];
-                btn.textContent = acc.name.slice(0, 8) + ' ' + currentCode(acc) + ' (' + secondsRemain(acc.period) + 's)';
-            } else if (hide) {
-                btn.style.display = 'none';
-            }
+            btn.style.display = 'block';
+            btn.style.width = 'auto';
+            btn.style.minWidth = '112px';
+            btn.style.height = '44px';
+            btn.style.padding = '0 14px';
+            btn.style.borderRadius = '22px';
+            btn.style.fontSize = '15px';
+            var list = getAccounts();
+            if (list.length === 0) { btn.textContent = '2FA'; return; }
+            var matched = matchAccountsForPage();
+            var acc = matched[0] || list[0];
+            btn.textContent = acc.name.slice(0, 8) + ' ' + currentCode(acc) + ' (' + secondsRemain(acc.period) + 's)';
         }, 500);
     }
 
